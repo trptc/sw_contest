@@ -1,196 +1,133 @@
-  // 마커를 담을 배열입니다
-  var markers = [];
+var markers = [];
 
-  var overlayOn = false, // 지도 위에 로드뷰 오버레이가 추가된 상태를 가지고 있을 변수
-          container = document.getElementById('container'), // 지도와 로드뷰를 감싸고 있는 div 입니다
-          mapContainer = document.getElementById('map'), // 지도를 표시할 div 입니다
-          rvContainer = document.getElementById('roadview'); //로드뷰를 표시할 div 입니다
+  var overlayOn = false,
+          container = document.getElementById('container'),
+          mapContainer = document.getElementById('map'),
+          rvContainer = document.getElementById('roadview');
 
-  var mapCenter = new kakao.maps.LatLng(36.649552, 127.857010), // 지도의 중심좌표
+  var mapCenter = new kakao.maps.LatLng(36.649552, 127.857010),
           mapOption = {
-            center: mapCenter, // 지도의 중심좌표
-            level: 12 // 지도의 확대 레벨
+            center: mapCenter,
+            level: 12 
           };
 
-  // 지도를 표시할 div와 지도 옵션으로 지도를 생성합니다
   var map = new kakao.maps.Map(mapContainer, mapOption);
-
-  // 로드뷰 객체를 생성합니다
   var rv = new kakao.maps.Roadview(rvContainer);
-
-  // 좌표로부터 로드뷰 파노라마 ID를 가져올 로드뷰 클라이언트 객체를 생성합니다
   var rvClient = new kakao.maps.RoadviewClient();
 
-  // 로드뷰에 좌표가 바뀌었을 때 발생하는 이벤트를 등록합니다
   kakao.maps.event.addListener(rv, 'position_changed', function() {
 
-    // 현재 로드뷰의 위치 좌표를 얻어옵니다
     var rvPosition = rv.getPosition();
-
-    // 지도의 중심을 현재 로드뷰의 위치로 설정합니다
     map.setCenter(rvPosition);
 
-    // 지도 위에 로드뷰 도로 오버레이가 추가된 상태이면
     if(overlayOn) {
-      // 마커의 위치를 현재 로드뷰의 위치로 설정합니다
       marker.setPosition(rvPosition);
     }
   });
 
-  // 마커 이미지를 생성합니다
   var markImage = new kakao.maps.MarkerImage(
           'https://t1.daumcdn.net/localimg/localimages/07/2018/pc/roadview_minimap_wk_2018.png',
           new kakao.maps.Size(26, 46),
-          {
-            // 스프라이트 이미지를 사용합니다.
-            // 스프라이트 이미지 전체의 크기를 지정하고
+          {  
             spriteSize: new kakao.maps.Size(1666, 168),
-            // 사용하고 싶은 영역의 좌상단 좌표를 입력합니다.
-            // background-position으로 지정하는 값이며 부호는 반대입니다.
             spriteOrigin: new kakao.maps.Point(705, 114),
             offset: new kakao.maps.Point(13, 46)
           }
   );
 
-  // 드래그가 가능한 마커를 생성합니다
   var marker = new kakao.maps.Marker({
     image : markImage,
     position: mapCenter,
     draggable: true
   });
 
-  // 마커에 dragend 이벤트를 등록합니다
   kakao.maps.event.addListener(marker, 'dragend', function(mouseEvent) {
-
-    // 현재 마커가 놓인 자리의 좌표입니다
     var position = marker.getPosition();
-
-    // 마커가 놓인 위치를 기준으로 로드뷰를 설정합니다
     toggleRoadview(position);
   });
 
-  //지도에 클릭 이벤트를 등록합니다
+  
   kakao.maps.event.addListener(map, 'click', function(mouseEvent){
-
-    // 지도 위에 로드뷰 도로 오버레이가 추가된 상태가 아니면 클릭이벤트를 무시합니다
     if(!overlayOn) {
       return;
     }
 
-    // 클릭한 위치의 좌표입니다
     var position = mouseEvent.latLng;
-
-    // 마커를 클릭한 위치로 옮깁니다
     marker.setPosition(position);
-
-    // 클락한 위치를 기준으로 로드뷰를 설정합니다
     toggleRoadview(position);
   });
 
-  // 전달받은 좌표(position)에 가까운 로드뷰의 파노라마 ID를 추출하여
-  // 로드뷰를 설정하는 함수입니다
+  
+  
   function toggleRoadview(position){
     rvClient.getNearestPanoId(position, 50, function(panoId) {
-      // 파노라마 ID가 null 이면 로드뷰를 숨깁니다
       if (panoId === null) {
         toggleMapWrapper(true, position);
       } else {
         toggleMapWrapper(false, position);
-
-        // panoId로 로드뷰를 설정합니다
         rv.setPanoId(panoId, position);
       }
     });
   }
 
-  // 지도를 감싸고 있는 div의 크기를 조정하는 함수입니다
+  
   function toggleMapWrapper(active, position) {
     if (active) {
-
-      // 지도를 감싸고 있는 div의 너비가 100%가 되도록 class를 변경합니다
       container.className = '';
-
-      // 지도의 크기가 변경되었기 때문에 relayout 함수를 호출합니다
       map.relayout();
-
-      // 지도의 너비가 변경될 때 지도중심을 입력받은 위치(position)로 설정합니다
       map.setCenter(position);
     } else {
-
-      // 지도만 보여지고 있는 상태이면 지도의 너비가 50%가 되도록 class를 변경하여
-      // 로드뷰가 함께 표시되게 합니다
       if (container.className.indexOf('view_roadview') === -1) {
         container.className = 'view_roadview';
-
-        // 지도의 크기가 변경되었기 때문에 relayout 함수를 호출합니다
         map.relayout();
-
-        // 지도의 너비가 변경될 때 지도중심을 입력받은 위치(position)로 설정합니다
         map.setCenter(position);
       }
     }
   }
 
-  // 지도 위의 로드뷰 도로 오버레이를 추가,제거하는 함수입니다
+  
   function toggleOverlay(active) {
     if (active) {
       overlayOn = true;
-
-      // 지도 위에 로드뷰 도로 오버레이를 추가합니다
       map.addOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);
-
-      // 지도 위에 마커를 표시합니다
       marker.setMap(map);
-
-      // 마커의 위치를 지도 중심으로 설정합니다
       marker.setPosition(map.getCenter());
 
-      // 로드뷰의 위치를 지도 중심으로 설정합니다
       toggleRoadview(map.getCenter());
     } else {
       overlayOn = false;
-
-      // 지도 위의 로드뷰 도로 오버레이를 제거합니다
       map.removeOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);
-
-      // 지도 위의 마커를 제거합니다
       marker.setMap(null);
     }
   }
 
-  // 지도 위의 로드뷰 버튼을 눌렀을 때 호출되는 함수입니다
+  
   function setRoadviewRoad() {
     var control = document.getElementById('roadviewControl');
-
-    // 버튼이 눌린 상태가 아니면
     if (control.className.indexOf('active') === -1) {
       control.className = 'active';
-
-      // 로드뷰 도로 오버레이가 보이게 합니다
       toggleOverlay(true);
     } else {
       control.className = '';
-
-      // 로드뷰 도로 오버레이를 제거합니다
       toggleOverlay(false);
     }
   }
 
-  // 로드뷰에서 X버튼을 눌렀을 때 로드뷰를 지도 뒤로 숨기는 함수입니다
+  
   function closeRoadview() {
     var position = marker.getPosition();
     toggleMapWrapper(true, position);
   }
 
-  // 마커 클러스터러를 생성합니다
+  
   var clusterer = new kakao.maps.MarkerClusterer({
-    map: map, // 마커들을 클러스터로 관리하고 표시할 지도 객체
-    averageCenter: true, // 클러스터에 포함된 마커들의 평균 위치를 클러스터 마커 위치로 설정
-    minLevel: 4 // 클러스터 할 최소 지도 레벨
+    map: map, 
+    averageCenter: true, 
+    minLevel: 4 
   });
 
-  //지도 마커 데이터를 추가한다
-  var data = [   //https://m.blog.naver.com/kjchol123/222071310747 <~ 데이터 출처
+  // 데이터
+  var data = [   
     [37.5758, 126.9768, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/iEt5LHAA3ny5aN7Q7">경복궁 </a><br/>'],
     [37.58, 126.9923, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/XW2jcbfaVygyXjW67">창덕궁 </a><br/>'],
     [37.5721, 126.9868, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/98PTqyLSHLUuZ3GP9">인사동거리 </a><br/>'],
@@ -200,12 +137,10 @@
     [37.578769, 126.994853, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/kDUWkgz3VUDQgaTn7">창경궁 </a><br/>'],
     [37.565803, 126.975150, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/zZras4iDUUPRisN5A">덕수궁 </a><br/>'],
     [37.570780, 126.968548, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/aqPAiE4jFkVEofy98">경희궁 </a><br/>'],
-    [37.556649, 126.970545, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@37.5567075,126.9706905,3a,75y,255.89h,71.32t/data=!3m6!1e1!3m4!1sJGMBvN2E-R70_hTCO5t2Kg!2e0!7i13312!8i6656">서울로7017 </a><br/>'],
     [37.511583, 127.059440, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/WFc78aaua94utCGE8">스타필드 코엑스몰 </a><br/>'],
     [37.553420, 126.923466, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/A1313zPVj1S7C4qA7">홍대거리 </a><br/>'],
     [37.400960, 126.733542, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/mox2dCRf4WXcctDn7">소래포구역 </a><br/>'],
     [37.392487, 126.639402, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/Nqw4jgWNBsozp3rcA">송도 센트럴파크 </a><br/>'],
-    [37.475321, 126.597901, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@37.4724007,126.6025543,3a,82.3y,208.1h,93.9t/data=!3m8!1e1!3m6!1sAF1QipO4JLpQb6l1OIYwIk_T-VtbpVkQ2zSpx8heWHVE!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipO4JLpQb6l1OIYwIk_T-VtbpVkQ2zSpx8heWHVE%3Dw203-h100-k-no-pi-0-ya220.50041-ro0-fo100!7i8000!8i4000">월미도 </a><br/>'],
     [37.475609, 126.617396, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/37.475609, 126.617396">인천 차이나타운 </a><br/>'],
     [37.743961, 127.352632, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/37YygyQbS1AMbbmbA">가평아침고요수목원 </a><br/>'],
     [37.424915, 126.864436, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/j9YAsqhcF3osfU366">광명동굴 </a><br/>'],
@@ -216,7 +151,6 @@
     [37.291044, 127.202976, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/pnCz7gnPh4H4oxJS9">에버랜드 </a><br/>'],
     [37.891394, 126.740514, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/UwQqFcR9KCv2ek4o6">파주DMZ </a><br/>'],
     [37.796428, 128.917224, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/37.796428, 128.917224">강릉커피거리 </a><br/>'],
-    [38.586660, 128.375220, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@38.5864731,128.375472,3a,75y,110.64h,82.5t/data=!3m8!1e1!3m6!1sAF1QipMmNPx-s8WaPjQNkerXQK0xTs7vTv9Qii5j_xf-!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipMmNPx-s8WaPjQNkerXQK0xTs7vTv9Qii5j_xf-%3Dw203-h100-k-no-pi-0-ya153.66354-ro0-fo100!7i11264!8i5632">고성통일전망대 </a><br/>'],
     [37.791733, 127.525774, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/E5bDzkxuWwkkbj1u8">남이섬 </a><br/>'],
     [37.690678, 128.751223, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/d9RbmFyNhn5tixSn6">대관령 </a><br/>'],
     [37.325833, 129.021030, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/DZRgWJQgYobKv5BP6">삼척 대이리 동굴지대 </a><br/>'],
@@ -227,7 +161,6 @@
     [37.891055, 128.827763, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/37.891055, 128.827763">주문진 수산시장 </a><br/>'],
     [36.461168, 127.112895, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/CZNykfALkR34cfVd9">무령왕릉 </a><br/>'],
     [36.755879, 127.836201, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/BhWqCq36Dk9p8k3AA">괴산 산막이 옛길 </a><br/>'],
-    [36.977843, 128.339782, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@36.9767151,128.339376,3a,75y,103.77h,59.44t/data=!3m8!1e1!3m6!1sAF1QipMEobwWsI2FujOi2rnJebrWmiUWOkRwjW7UyMAb!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipMEobwWsI2FujOi2rnJebrWmiUWOkRwjW7UyMAb%3Dw203-h100-k-no-pi1.4733607-ya262.6013-ro-2.0271637-fo100!7i5376!8i2688">단양 잔도 </a><br/>'],
     [37.003346, 128.343746, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/7LfVLQp6cpHj3puM6">단양 팔경 </a><br/>'],
     [36.406526, 127.438700, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/36.406526, 127.438700">계족산 황톳길 </a><br/>'],
     [36.305596, 126.516042, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/36.305596, 126.516042">대천해수욕장 </a><br/>'],
@@ -247,7 +180,7 @@
     [34.752059, 127.983227, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/1Swm1fAvB4hSgGcq9">보리암 </a><br/>'],
     [35.861658, 128.607018, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/35.861658, 128.607018">방천시장 </a><br/>'],
     [35.868575, 128.580341, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/35.868575, 128.580341">서문시장 </a><br/>'],
-    [35.097386, 129.010576, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/gyq15qB1E6Jhpnvi7">김천문화마을 </a><br/>'],                        // ppt
+    [35.097386, 129.010576, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/gyq15qB1E6Jhpnvi7">김천문화마을 </a><br/>'],                        
     [35.156092, 129.152054, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/wd7VW94JzrHQpLoF6">더베이101 </a><br/>'],
     [36.538635, 128.518638, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/y6qmXWy1yqe4KipbA">안동하회마을 </a><br/>'],
     [36.034763, 129.380456, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/36.034763, 129.380456">송도해수욕장 </a><br/>'],
@@ -257,7 +190,7 @@
     [35.546117, 129.295630, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/CjZsuMPpHCYzhinf8">태화강 십리대숲 </a><br/>'],
     [37.020704, 129.254890, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/hpy3ZBZKQ7FuqHcn9">금강소나무숲길 </a><br/>'],
     [35.096704, 129.030497, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/35.096704, 129.030497">자갈치시장 </a><br/>'],
-    [35.189018, 128.078000, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/QkcFY8CMAFFCQq1CA">진주성 </a><br/>'],
+    // [35.189018, 128.078000, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/QkcFY8CMAFFCQq1CA">진주성 </a><br/>'],
     [35.549789, 128.411991, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/vJmhsoVMa4A2wa6v8">우포늪 </a><br/>'],
     [36.388180, 129.166533, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/vBER1nsuehLinyicA">주왕산 </a><br/>'],
     [35.053038, 129.087182, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/P5owAdDXn3KsUu7f6">태종대 </a><br/>'],
@@ -265,7 +198,7 @@
     [35.801189, 128.098016, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@35.8011197,128.0980892,3a,75y,341.96h,90.13t/data=!3m8!1e1!3m6!1sAF1QipPV5N_T0aUB2KPwNWvXoCbhJIUyfvxH4EYsJHY_!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipPV5N_T0aUB2KPwNWvXoCbhJIUyfvxH4EYsJHY_%3Dw203-h100-k-no-pi-0-ya141.1414-ro-0-fo100!7i10240!8i5120">해인사 </a><br/>'],
     [35.158656, 129.160345, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/35.158656, 129.160345">해운대 해수욕장 </a><br/>'],
     [34.533883, 126.781268, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/M63UjM1xQyzznVkA6">가우도 </a><br/>'],
-    [35.276028, 127.310038, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/WXJ6pVbpJtt3jAud6">섬진강 기차마을 </a><br/>'],
+    // [35.276028, 127.310038, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/WXJ6pVbpJtt3jAud6">섬진강 기차마을 </a><br/>'],
     [35.140304, 126.915630, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/w44BNdJwH9dhe5wk7">양림동 근대문화유산 </a><br/>'],
     [35.184224, 127.012569, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/U7VkD6N1hZUGguCg9">소쇄원 </a><br/>'],
     [35.219300, 126.996456, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@35.2195625,126.9962311,3a,75y,324.59h,90t/data=!3m8!1e1!3m6!1sAF1QipNWzdTs6kJ9BOWDUrmrY86LV99Ach03NU3TPDeO!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipNWzdTs6kJ9BOWDUrmrY86LV99Ach03NU3TPDeO%3Dw203-h100-k-no-pi-0-ya341.85464-ro-0-fo100!7i7168!8i3584">명옥헌 </a><br/>'],
@@ -306,19 +239,21 @@
     [37.499510, 130.883476, '<div style="padding: 5px"><a target="_blank" href="https://goo.gl/maps/U3cxLgiXcw1vsyRX6">봉래폭포 </a><br/>'],
     [37.240032, 131.869353, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/37.240032, 131.869353">동도 </a><br/>'],
     [38.576331, 128.382538, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@38.576394,128.3825602,3a,75y,88.04h,84.41t/data=!3m8!1e1!3m6!1sAF1QipPwblhaRDx9SZ02ycRZCVtVe2yim6Cqb9wkrzd0!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipPwblhaRDx9SZ02ycRZCVtVe2yim6Cqb9wkrzd0%3Dw203-h100-k-no-pi-0-ya122.93372-ro-0-fo100!7i5472!8i2736">DMZ박물관 </a><br/>'],
-    [36.0282, 126.7489, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/36.0282, 126.7489">금강산생태공원 </a><br/>']
+    [36.0282, 126.7489, '<div style="padding: 5px"><a target="_blank" href="https://map.kakao.com/link/roadview/36.0282, 126.7489">금강산생태공원 </a><br/>'],
+    [37.556649, 126.970545, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@37.5567075,126.9706905,3a,75y,255.89h,71.32t/data=!3m6!1e1!3m4!1sJGMBvN2E-R70_hTCO5t2Kg!2e0!7i13312!8i6656">서울로7017 </a><br/>'],
+    [37.475321, 126.597901, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@37.4724007,126.6025543,3a,82.3y,208.1h,93.9t/data=!3m8!1e1!3m6!1sAF1QipO4JLpQb6l1OIYwIk_T-VtbpVkQ2zSpx8heWHVE!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipO4JLpQb6l1OIYwIk_T-VtbpVkQ2zSpx8heWHVE%3Dw203-h100-k-no-pi-0-ya220.50041-ro0-fo100!7i8000!8i4000">월미도 </a><br/>'],
+    [38.586660, 128.375220, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@38.5864731,128.375472,3a,75y,110.64h,82.5t/data=!3m8!1e1!3m6!1sAF1QipMmNPx-s8WaPjQNkerXQK0xTs7vTv9Qii5j_xf-!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipMmNPx-s8WaPjQNkerXQK0xTs7vTv9Qii5j_xf-%3Dw203-h100-k-no-pi-0-ya153.66354-ro0-fo100!7i11264!8i5632">고성통일전망대 </a><br/>'],
+    [36.977843, 128.339782, '<div style="padding: 5px"><a target="_blank" href="https://www.google.com/maps/@36.9767151,128.339376,3a,75y,103.77h,59.44t/data=!3m8!1e1!3m6!1sAF1QipMEobwWsI2FujOi2rnJebrWmiUWOkRwjW7UyMAb!2e10!3e11!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipMEobwWsI2FujOi2rnJebrWmiUWOkRwjW7UyMAb%3Dw203-h100-k-no-pi1.4733607-ya262.6013-ro-2.0271637-fo100!7i5376!8i2688">단양 잔도 </a><br/>']
   ];
-  for (var i=0; i < data.length; i++){ //데이터 개수만큼 반복한다
-    // 지도에 마커를 생성하고 표시한다
+  for (var i=0; i < data.length; i++){ 
+    
     var marker1 = new kakao.maps.Marker({
-      position: new kakao.maps.LatLng(data[i][0], data[i][1]), // 마커의 좌표
-      map: map // 마커를 표시할 지도 객체
+      position: new kakao.maps.LatLng(data[i][0], data[i][1]), 
+      map: map 
     });
-    // 인포윈도우를 생성합니다
     var infowindow = new kakao.maps.InfoWindow({
       content : data[i][2]
     });
-
     markers.push(marker1);
 
     kakao.maps.event.addListener(marker1, 'click', makeOverListener(map, marker1, infowindow));
@@ -326,14 +261,14 @@
   }
   clusterer.addMarkers(markers);
 
-  // 인포윈도우를 표시하는 클로저를 만드는 함수입니다
+  
   function makeOverListener(map, marker, infowindow) {
     return function() {
       infowindow.open(map, marker);
     };
   }
 
-  // 인포윈도우를 닫는 클로저를 만드는 함수입니다
+  
   function makeOutListener(infowindow) {
     return function() {
       infowindow.close();
